@@ -78,5 +78,5 @@ def check_distance():
 
 GPIO.add_event_detect(echo_pin, GPIO.BOTH, callback=timer_call)  # add rising and falling edge detection on echo_pin (input)
 
-for i in range(1000): # check the distance 100 times
+while True:  # loop forever
     print(round(check_distance(), 1)) # print out the distance rounded to one decimal place
