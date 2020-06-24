@@ -7,6 +7,9 @@ GPIO.setmode(GPIO.BOARD)
 GPIO.setup(7, GPIO.OUT) # Connected to PWMA
 GPIO.setup(11, GPIO.OUT) # Connected to AIN2
 GPIO.setup(12, GPIO.OUT) # Connected to AIN1
+GPIO.setup(13, GPIO.OUT) # Connected to PWMA
+GPIO.setup(16, GPIO.OUT) # Connected to AIN2
+GPIO.setup(15, GPIO.OUT) # Connected to AIN1
 
 # Drive the motor clockwise
 GPIO.output(12, GPIO.HIGH) # Set AIN1
