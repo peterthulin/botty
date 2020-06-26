@@ -24,7 +24,7 @@ ECHO_PIN = 24
 def main():
     args = parse_args()
 
-    avoid_obstacles(args.threshold, args.timeout)
+    avoid_obstacles(args.distance_threshold, args.timeout)
 
 
 def parse_args():
@@ -42,7 +42,7 @@ def avoid_obstacles(threshold, timeout):
     GPIO.setmode(GPIO.BCM)
 
     motor_driver = motor.MotorDriver_TB6612()
-    distance_sensor = hy_srf05(
+    distance_sensor = hy_srf05.HY_SRF05(
         trigger_pin=TRIGGER_PIN,
         echo_pin=ECHO_PIN)
 
