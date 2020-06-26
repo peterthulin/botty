@@ -10,12 +10,13 @@ import time
 import statistics
 
 #### Define program constants
-trigger_pin=4    # the GPIO pin that is set to high to send an ultrasonic wave out. (output)
-echo_pin=17      # the GPIO pin that indicates a returning ultrasonic wave when it is set to high (input)
-number_of_samples=5 # this is the number of times the sensor tests the distance and then picks the middle value to return
-sample_sleep = .01  # amount of time in seconds that the system sleeps before sending another sample request to the sensor. You can try this at .05 if your measurements aren't good, or try it at 005 if you want faster sampling.
-calibration1 = 30   # the distance the sensor was calibrated at
-calibration2 = 1750 # the median value reported back from the sensor at 30 cm
+trigger_pin = 25      # the GPIO pin that is set to high to send an ultrasonic wave out. (output)
+echo_pin = 24         # the GPIO pin that indicates a returning ultrasonic wave when it is set to high (input)
+number_of_samples = 5 # this is the number of times the sensor tests the distance and then picks the middle value to return
+sample_sleep = .01    # amount of time in seconds that the system sleeps before sending another sample request to the sensor. You can try this at .05 if your measurements aren't good, or try it at 005 if you want faster sampling.
+calibration1 = 30     # the distance the sensor was calibrated at
+calibration2 = 1750   # the median value reported back from the sensor at 30 cm
+calib_ratio = 1000000 * calibration1 / calibration2
 time_out = .05 # measured in seconds in case the program gets stuck in a loop
 
 #### Set up GPIO
@@ -31,8 +32,8 @@ samples_list = [] #type: list # list of data collected from sensor which are ave
 stack = []
 
 
-def timer_call(channel) :
-# call back function when the rising edge is detected on the echo pin
+def timer_call(channel):
+    # call back function when the rising edge is detected on the echo pin
     now = time.monotonic()  # gets the current time with a lot of decimal places
     stack.append(now) # stores the start and end times for the distance measurement in a LIFO stack
 
@@ -43,7 +44,7 @@ def trigger():
     GPIO.output(trigger_pin, GPIO.LOW)
 
 def check_distance():
-# generates an ultrasonic pulse and uses the times that are recorded on the stack to calculate the distance
+    # generates an ultrasonic pulse and uses the times that are recorded on the stack to calculate the distance
     # Empty the samples list
     samples_list.clear()
 
