@@ -1,41 +1,86 @@
 import time
 import RPi.GPIO as GPIO
 
-PIN_PWMA = 4
-PIN_AIN1 = 18
-PIN_AIN2 = 17
 
-PIN_PWMB = 22
-PIN_BIN1 = 27
-PIN_BIN2 = 23
+class MotorDriver_TB6612():
 
-ALL_PINS = [
-	PIN_PWMA, PIN_AIN1, PIN_AIN2,
-	PIN_PWMB, PIN_BIN1, PIN_BIN2]
+	def __init__(self):
+		# TODO: let pins be input parameters
+		self.PIN_PWMA = 4
+		self.PIN_AIN1 = 18
+		self.PIN_AIN2 = 17
+		self.PIN_PWMB = 22
+		self.PIN_BIN1 = 27
+		self.PIN_BIN2 = 23
+		self.all_pins = [
+			self.PIN_PWMA, self.PIN_AIN1, self.PIN_AIN2,
+			self.PIN_PWMB, self.PIN_BIN1, self.PIN_BIN2
+		]
 
-GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BCM)
+	self._init_gpio()
 
-# set up GPIO pins
-GPIO.setup(PIN_PWMA, GPIO.OUT)
-GPIO.setup(PIN_AIN1, GPIO.OUT)
-GPIO.setup(PIN_AIN2, GPIO.OUT)
+	def _init_gpio(self):
+		GPIO.setup(self.PIN_PWMA, GPIO.OUT)
+		GPIO.setup(self.PIN_AIN1, GPIO.OUT)
+		GPIO.setup(self.PIN_AIN2, GPIO.OUT)
+		GPIO.setup(self.PIN_PWMB, GPIO.OUT)
+		GPIO.setup(self.PIN_BIN1, GPIO.OUT)
+		GPIO.setup(self.PIN_BIN2, GPIO.OUT)
 
-GPIO.setup(PIN_PWMB, GPIO.OUT)
-GPIO.setup(PIN_BIN1, GPIO.OUT)
-GPIO.setup(PIN_BIN2, GPIO.OUT)
+	def forward(self):
+		GPIO.output(self.PIN_AIN1, GPIO.HIGH)
+		GPIO.output(self.PIN_AIN2, GPIO.LOW)
+		GPIO.output(self.PIN_PWMA, GPIO.HIGH)
+		GPIO.output(self.PIN_BIN1, GPIO.HIGH)
+		GPIO.output(self.PIN_BIN2, GPIO.LOW)
+		GPIO.output(self.PIN_PWMB, GPIO.HIGH)
 
-# Drive the motor clockwise
-GPIO.output(PIN_AIN1, GPIO.HIGH)
-GPIO.output(PIN_AIN2, GPIO.LOW)
-GPIO.output(PIN_PWMA, GPIO.HIGH)
+	def backward(self):
+		GPIO.output(self.PIN_AIN1, GPIO.LOW)
+		GPIO.output(self.PIN_AIN2, GPIO.HIGH)
+		GPIO.output(self.PIN_PWMA, GPIO.HIGH)
+		GPIO.output(self.PIN_BIN1, GPIO.LOW)
+		GPIO.output(self.PIN_BIN2, GPIO.HIGH)
+		GPIO.output(self.PIN_PWMB, GPIO.HIGH)
 
-GPIO.output(PIN_BIN1, GPIO.HIGH)
-GPIO.output(PIN_BIN2, GPIO.LOW)
-GPIO.output(PIN_PWMB, GPIO.HIGH)
+	def rotate_left(self):
+		GPIO.output(self.PIN_AIN1, GPIO.LOW)
+		GPIO.output(self.PIN_AIN2, GPIO.HIGH)
+		GPIO.output(self.PIN_PWMA, GPIO.HIGH)
+		GPIO.output(self.PIN_BIN1, GPIO.HIGH)
+		GPIO.output(self.PIN_BIN2, GPIO.LOW)
+		GPIO.output(self.PIN_PWMB, GPIO.HIGH)
 
-time.sleep(1)
+	def rotate_right(self):
+		GPIO.output(self.PIN_AIN1, GPIO.HIGH)
+		GPIO.output(self.PIN_AIN2, GPIO.LOW)
+		GPIO.output(self.PIN_PWMA, GPIO.HIGH)
+		GPIO.output(self.PIN_BIN1, GPIO.LOW)
+		GPIO.output(self.PIN_BIN2, GPIO.HIGH)
+		GPIO.output(self.PIN_PWMB, GPIO.HIGH)
 
-# Set all pins to low
-for pin in ALL_PINS:
-	GPIO.output(pin, GPIO.LOW)
+	def stop(self):
+		for pin in self.all_pins:
+			GPIO.output(pin, GPIO.LOW)
+
+
+def main():
+    """ Simple main loop for testing """
+    motor_driver = MotorDriver_TB6612()
+
+    # Test all motor functions for 1 sec
+    motor_driver.forward()
+    time.sleep(1.0)
+
+    motor_driver.backward()
+    time.sleep(1.0)
+
+    motor_driver.rotate_left()
+    time.sleep(1.0)
+
+    motor_driver.rotate_right()
+    time.sleep(1.0)
+
+
+if __name__ == '__main__':
+    main()
