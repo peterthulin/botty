@@ -60,8 +60,8 @@ class HY_SRF05():
 
     def trigger(self):
         # set our trigger high, triggering a pulse to be sent - a 1/100,000 of a second pulse or 10 microseconds
-        GPIO.output(self.trigger_pin, GPIO.HIGH) 
-        time.sleep(self.trigger_sleep) 
+        GPIO.output(self.trigger_pin, GPIO.HIGH)
+        time.sleep(self.trigger_sleep)
         GPIO.output(self.trigger_pin, GPIO.LOW)
 
     def get_distance(self):
@@ -72,7 +72,7 @@ class HY_SRF05():
         self.samples_list.clear()
 
         # Checks if the samples_list contains the required number_of_samples
-        while len(self.samples_list) < number_of_samples:
+        while len(self.samples_list) < self.number_of_samples:
             # Tell the sensor to send out an ultrasonic pulse.
             self.trigger()
 
@@ -87,12 +87,12 @@ class HY_SRF05():
                     pass
 
                 # The system timed out waiting for the echo to come back. Send a new pulse.
-                trigger()
+                self.trigger()
 
             # Stack has two elements on it.
             if len(self.stack) == 2:
                 # once the stack has two elements in it, store the difference in the samples_list
-                samples_list.append(self.stack.pop() - self.stack.pop())
+                self.samples_list.append(self.stack.pop() - self.stack.pop())
 
             # Somehow we got three items on the stack, so clear the stack
             elif len(self.stack) > 2:
