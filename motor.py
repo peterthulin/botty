@@ -17,7 +17,7 @@ class MotorDriver_TB6612():
 			self.PIN_PWMB, self.PIN_BIN1, self.PIN_BIN2
 		]
 
-	self._init_gpio()
+		self._init_gpio()
 
 	def _init_gpio(self):
 		GPIO.setup(self.PIN_PWMA, GPIO.OUT)
@@ -80,6 +80,8 @@ def main():
 
     motor_driver.rotate_right()
     time.sleep(1.0)
+
+    motor_driver.stop()
 
 
 if __name__ == '__main__':
