@@ -66,6 +66,7 @@ class MotorDriver_TB6612():
 
 def main():
     """ Simple main loop for testing """
+    GPIO.setmode(GPIO.BCM)
     motor_driver = MotorDriver_TB6612()
 
     # Test all motor functions for 1 sec
