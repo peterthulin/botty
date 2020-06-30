@@ -98,7 +98,7 @@ def main():
     echo_pin = 24
     sensor = HY_SRF05(trigger_pin, echo_pin)
     while True:
-        print(round(sensor.get_distance(), 1))
+        print(sensor.get_distance())
 
 
 if __name__ == '__main__':
