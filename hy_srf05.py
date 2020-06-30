@@ -48,17 +48,18 @@ class HY_SRF05():
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.trigger_pin, GPIO.OUT)
         GPIO.setup(self.echo_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-        GPIO.add_event_detect(self.echo_pin, GPIO.FALLING, callback=self.falling_trigger_callback)
-        GPIO.add_event_detect(self.echo_pin, GPIO.RISING, callback=self.rising_trigger_callback)
+        GPIO.add_event_detect(self.echo_pin, GPIO.BOTH, callback=self.trigger_callback)
 
-    def rising_trigger_callback(self, channel):
+    def trigger_callback(self, channel):
+        """
+        Callback function when the rising edge is detected on the echo pin
+        """
         now = time.monotonic()
-        print(f"Rising: {now}")
-        self.stack.append(now)
-
-    def falling_trigger_callback(self, channel):
-        now = time.monotonic()
-        print(f"Falling: {now}")
+        # stores the start and end times for the distance measurement in a LIFO stack
+        if GPIO.input(self.trigger_pin) == 0:
+            print(f"Falling: {now}")
+        else:
+            print(f"Rising: {now}")
         self.stack.append(now)
 
     def trigger(self):
@@ -75,6 +76,8 @@ class HY_SRF05():
         on the rising and falling edge on the echo pin
         """
 
+        self.stack.clear()
+
         # Tell the sensor to send out an ultrasonic pulse.
         self.trigger()
         start = time.monotonic()
@@ -88,6 +91,8 @@ class HY_SRF05():
         if len(self.stack) == 2:
             time_diff = self.stack.pop() - self.stack.pop()
             distance = time_diff * self.calib_ratio
+        else:
+            print(f"Stack size: {len(self.stack)}")
 
         # Pause to make sure we don't overload the sensor with requests
         time.sleep(self.sample_sleep)
