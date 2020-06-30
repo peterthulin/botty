@@ -30,13 +30,13 @@ class HY_SRF05():
         self.number_of_samples = 5
         # amount of time in seconds that the system sleeps before sending another
         # sample request to the sensor
-        # 0.01 seconds means we can measure at most 340 * 0.01 / 2 = 1.7 meters
         self.sample_sleep = 0.01
 
         # Sleep time after trigger call
         self.trigger_sleep = 0.00001
 
         # Time out in seconds in case the program gets stuck in a loop
+        # 0.05 seconds means we can measure at most 340 * 0.05 / 2 = 8.5 meters
         self.time_out = .05
 
         self.stack = []
@@ -48,14 +48,17 @@ class HY_SRF05():
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.trigger_pin, GPIO.OUT)
         GPIO.setup(self.echo_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-        GPIO.add_event_detect(self.echo_pin, GPIO.BOTH, callback=self.timer_callback)
+        GPIO.add_event_detect(self.echo_pin, GPIO.FALLING, callback=self.falling_trigger_callback)
+        GPIO.add_event_detect(self.echo_pin, GPIO.RISING, callback=self.rising_trigger_callback)
 
-    def timer_callback(self, channel):
-        """
-        Callback function when the rising edge is detected on the echo pin
-        """
+    def rising_trigger_callback(self, channel):
         now = time.monotonic()
-        # stores the start and end times for the distance measurement in a LIFO stack
+        print(f"Rising: {now}")
+        self.stack.append(now)
+
+    def falling_trigger_callback(self, channel):
+        now = time.monotonic()
+        print(f"Falling: {now}")
         self.stack.append(now)
 
     def trigger(self):
@@ -77,7 +80,7 @@ class HY_SRF05():
         start = time.monotonic()
 
         # Wait for the echo pulse while checking the timeout condition
-        while len(self.stack) < 2 and time.monotonic() < start + self.time_out:
+        while len(self.stack) < 2 and (time.monotonic() < start + self.time_out):
             pass
 
         # If we have two elements on the stack we can calculate the distance
