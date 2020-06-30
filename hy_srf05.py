@@ -24,7 +24,7 @@ class HY_SRF05():
         self.echo_pin = echo_pin
 
         # Assume speed of sound is 343 m/s. The pulse has to travel the distance twice.
-        self.time_to_distance_factor = 343 / 2
+        self.time_to_distance_factor = 343.0 / 2.0
 
         # amount of time in seconds that the system sleeps before sending another
         # sample request to the sensor
@@ -89,7 +89,7 @@ class HY_SRF05():
             second_edge = self.echo_stack[1]
             # Make sure we have captured a rising and falling edge on the echo pin
             if first_edge.mode == 1 and second_edge.mode == 0:
-                time_diff = first_edge.time - second_edge.time
+                time_diff = second_edge.time - first_edge.time
                 distance = time_diff * self.time_to_distance_factor
             else:
                 print("Conflicting pin edges")
@@ -106,7 +106,11 @@ def main():
     echo_pin = 24
     sensor = HY_SRF05(trigger_pin, echo_pin)
     while True:
-        print(sensor.get_distance())
+        sensor.trigger()
+        time.wait(0.1)
+        print(sensor.echo_stack)
+        print(f"Diff: {sensor.echo_stack[1] - sensor.echo_stack[0]}")
+        sensor.echo_stack.clear()
 
 
 if __name__ == '__main__':
