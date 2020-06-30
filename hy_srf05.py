@@ -48,15 +48,15 @@ class HY_SRF05():
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.trigger_pin, GPIO.OUT)
         GPIO.setup(self.echo_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-        GPIO.add_event_detect(self.echo_pin, GPIO.BOTH, callback=self.trigger_callback)
+        GPIO.add_event_detect(self.echo_pin, GPIO.BOTH, callback=self.echo_callback)
 
-    def trigger_callback(self, channel):
+    def echo_callback(self, channel):
         """
         Callback function when the rising edge is detected on the echo pin
         """
         now = time.monotonic()
         # stores the start and end times for the distance measurement in a LIFO stack
-        if GPIO.input(self.trigger_pin) == 0:
+        if GPIO.input(self.echo_pin) == 0:
             print(f"Falling: {now}")
         else:
             print(f"Rising: {now}")
