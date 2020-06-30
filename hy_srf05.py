@@ -9,7 +9,6 @@ https://erich.forler.ca/component/content/article/33-blog-hands-on-tech/146-rasp
 
 import RPi.GPIO as GPIO
 import time
-import statistics
 
 
 class HY_SRF05():
@@ -26,9 +25,11 @@ class HY_SRF05():
         self.calib_ratio = calib_ratio
 
         # TODO: make these inputs
-        # The number of times the sensor tests the distance and then picks the middle value to return
+        # The number of times the sensor tests the distance and
+        # then picks the middle value to return
         self.number_of_samples = 5
-        # amount of time in seconds that the system sleeps before sending another sample request to the sensor
+        # amount of time in seconds that the system sleeps before sending another
+        # sample request to the sensor
         # 0.01 seconds means we can measure at most 340 * 0.01 / 2 = 1.7 meters
         self.sample_sleep = 0.01
 
@@ -38,7 +39,6 @@ class HY_SRF05():
         # Time out in seconds in case the program gets stuck in a loop
         self.time_out = .05
 
-        self.samples_list = []
         self.stack = []
 
         self.init_gpio_pins()
@@ -59,50 +59,37 @@ class HY_SRF05():
         self.stack.append(now)
 
     def trigger(self):
-        # set our trigger high, triggering a pulse to be sent - a 1/100,000 of a second pulse or 10 microseconds
+        """
+        Create a 10 microseconds pulse on the trigger pin
+        """
         GPIO.output(self.trigger_pin, GPIO.HIGH)
         time.sleep(self.trigger_sleep)
         GPIO.output(self.trigger_pin, GPIO.LOW)
 
     def get_distance(self):
         """
-        Generates an ultrasonic pulse and uses the times that are recorded on the stack to calculate the distance
+        Generate an ultrasonic pulse and calculate the distance using the time difference
+        on the rising and falling edge on the echo pin
         """
-        # Empty the samples list
-        self.samples_list.clear()
 
-        # Checks if the samples_list contains the required number_of_samples
-        while len(self.samples_list) < self.number_of_samples:
-            # Tell the sensor to send out an ultrasonic pulse.
-            self.trigger()
+        # Tell the sensor to send out an ultrasonic pulse.
+        self.trigger()
+        start = time.monotonic()
 
-            # check the length of stack to see if it contains a start and end time . Wait until 2 items in the list
-            while len(self.stack) < 2:
-                # waiting for the stack to fill with a start and end time
-                # get the time that we enter this loop to track for timeout
-                start = time.monotonic()
+        # Wait for the echo pulse while checking the timeout condition
+        while len(self.stack) < 2 and time.monotonic() < start + self.time_out:
+            pass
 
-                # check the timeout condition
-                while time.monotonic() < start + self.time_out:
-                    pass
+        # If we have two elements on the stack we can calculate the distance
+        distance = None
+        if len(self.stack) == 2:
+            time_diff = self.stack.pop() - self.stack.pop()
+            distance = time_diff * self.calib_ratio
 
-                # The system timed out waiting for the echo to come back. Send a new pulse.
-                self.trigger()
+        # Pause to make sure we don't overload the sensor with requests
+        time.sleep(self.sample_sleep)
 
-            # Stack has two elements on it.
-            if len(self.stack) == 2:
-                # once the stack has two elements in it, store the difference in the samples_list
-                self.samples_list.append(self.stack.pop() - self.stack.pop())
-
-            # Somehow we got three items on the stack, so clear the stack
-            elif len(self.stack) > 2:
-                self.stack.clear()
-
-            # Pause to make sure we don't overload the sensor with requests and allow the noise to die down
-            time.sleep(self.sample_sleep)
-
-        # returns the media distance calculation
-        return (statistics.median(self.samples_list) * self.calib_ratio)
+        return distance
 
 
 def main():
