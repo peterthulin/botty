@@ -7,11 +7,12 @@ Credit to original example by Eric Forler:
 https://erich.forler.ca/component/content/article/33-blog-hands-on-tech/146-raspberry-pi-ultrasonic-distance-sensor-hr-srf05-full-lesson
 """
 
-import RPi.GPIO as GPIO
+import argparse
 import time
-import numpy as np
-
 from collections import namedtuple
+
+import numpy as np
+import RPi.GPIO as GPIO
 
 # Container class representing an edge on a digital pin.
 # Contains the mode of the pin after readout and the time of reading.
@@ -23,18 +24,19 @@ class HY_SRF05():
     Class for easy use of HY-SRF05 ultrasonic sensor.
     """
 
-    def __init__(self, trigger_pin, echo_pin):
+    def __init__(self, trigger_pin, echo_pin, trigger_sleep=0.05):
         self.trigger_pin = trigger_pin
         self.echo_pin = echo_pin
 
         # Assume speed of sound is 343 m/s. The pulse has to travel the distance twice.
         self.time_to_distance_factor = 343.0 / 2.0
 
-        # Amount of time in seconds that the system sleeps before sending another
-        # sample request to the sensor. Sensor has an internal time out of 30 ms
-        # so we should not be lower than that.
-        self.sample_sleep = 0.03
-        self.last_trigger = time.monotonic()
+        # Amount of time required before allowing a new trigger to be sent.
+        # Sensor has an internal time out of 30 ms so we should not be lower than that.
+        if trigger_sleep < 0.03:
+            trigger_sleep = 0.03
+        self.trigger_sleep = trigger_sleep
+        self.last_trigger = 0.0
 
         # Sleep time after trigger call should be ~10 microseconds
         self.trigger_sleep = 0.00001
@@ -66,7 +68,7 @@ class HY_SRF05():
         """
         # Make sure we don't trigger too often
         now = time.monotonic()
-        if now - self.last_trigger > self.sample_sleep:
+        if now - self.last_trigger > self.trigger_sleep:
             GPIO.output(self.trigger_pin, GPIO.HIGH)
             time.sleep(self.trigger_sleep)
             GPIO.output(self.trigger_pin, GPIO.LOW)
@@ -128,14 +130,27 @@ class HY_SRF05():
 
 def main():
     """ Simple main loop for testing """
-    trigger_pin = 25
-    echo_pin = 24
+    args = parse_args()
     GPIO.setmode(GPIO.BCM)
-    sensor = HY_SRF05(trigger_pin, echo_pin)
+    sensor = HY_SRF05(args.trigger_pin, args.echo_pin, args.trigger_sleep)
     while True:
         distance = sensor.get_distance(send_trigger=True)
         if distance:
             print(f"Distance: {distance:1.4f} m")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Test program for HY-SRF05 sensor.")
+    parser.add_argument(
+        '-t', '--trigger-pin', type=int, default=25,
+        help='GPIO pin connected to the HY-SRF05 trigger pin.')
+    parser.add_argument(
+        '-e', '--echo-pin', type=int, default=24,
+        help='GPIO pin connected to the HY-SRF05 echo pin.')
+    parser.add_argument(
+        '-s', '--trigger-sleep', type=float, default=0.05,
+        help='Minimum allowed time between sensor triggers. Minimum allowed is 0.03 s.')
+    return parser.parse_args()
 
 
 if __name__ == '__main__':
