@@ -39,7 +39,7 @@ class HY_SRF05():
         self.last_trigger = 0.0
 
         # Sleep time after trigger call should be ~10 microseconds
-        self.trigger_sleep = 0.00001
+        self.trigger_pulse_sleep = 0.00001
 
         # Container for rising and falling edges on echo pin
         self.echo_stack = []
@@ -70,7 +70,7 @@ class HY_SRF05():
         now = time.monotonic()
         if now - self.last_trigger > self.trigger_sleep:
             GPIO.output(self.trigger_pin, GPIO.HIGH)
-            time.sleep(self.trigger_sleep)
+            time.sleep(self.trigger_pulse_sleep)
             GPIO.output(self.trigger_pin, GPIO.LOW)
             self.last_trigger = now
 
@@ -132,7 +132,7 @@ def main():
     """ Simple main loop for testing """
     args = parse_args()
     GPIO.setmode(GPIO.BCM)
-    sensor = HY_SRF05(args.trigger_pin, args.echo_pin, args.trigger_sleep)
+    sensor = HY_SRF05(args.trigger_pin, args.echo_pin, trigger_sleep=args.trigger_sleep)
     while True:
         distance = sensor.get_distance(send_trigger=True)
         if distance:
