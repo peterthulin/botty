@@ -4,14 +4,14 @@ import RPi.GPIO as GPIO
 
 class MotorDriver_TB6612():
 
-    def __init__(self):
+    def __init__(self,):
         # TODO: let pins be input parameters
-        self.PIN_PWMA = 4
-        self.PIN_AIN1 = 18
-        self.PIN_AIN2 = 17
-        self.PIN_PWMB = 22
-        self.PIN_BIN1 = 27
-        self.PIN_BIN2 = 23
+        self.PIN_PWMA = 12
+        self.PIN_AIN1 = 20
+        self.PIN_AIN2 = 16
+        self.PIN_PWMB = 13
+        self.PIN_BIN1 = 5
+        self.PIN_BIN2 = 6
         self.all_pins = [
             self.PIN_PWMA, self.PIN_AIN1, self.PIN_AIN2,
             self.PIN_PWMB, self.PIN_BIN1, self.PIN_BIN2
