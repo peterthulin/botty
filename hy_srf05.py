@@ -111,7 +111,11 @@ class HY_SRF05():
                 self.echo_stack.remove(second_edge)
             elif first_edge.mode == 0 and second_edge.mode == 1:
                 # Falling to rising pair. Remove the first.
+                # Test accepting these pairs as well since it seems common that they happen...
+                time_diff = second_edge.time - first_edge.time
+                time_diffs.append(time_diff)
                 self.echo_stack.remove(first_edge)
+                self.echo_stack.remove(second_edge)
             elif first_edge.mode == 1 and second_edge.mode == 1:
                 # Two rising edges in a row, we should remove the first
                 self.echo_stack.remove(first_edge)
