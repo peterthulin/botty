@@ -66,7 +66,7 @@ class HY_SRF05():
         """
         # Make sure we don't trigger too often
         now = time.monotonic()
-        if now - self.last_trigger < self.sample_sleep:
+        if now - self.last_trigger > self.sample_sleep:
             GPIO.output(self.trigger_pin, GPIO.HIGH)
             time.sleep(self.trigger_sleep)
             GPIO.output(self.trigger_pin, GPIO.LOW)
@@ -86,36 +86,42 @@ class HY_SRF05():
         if len(self.echo_stack) < 2:
             return None
 
-        # Search for rising to falling edge pairs
-        time_diffs = []
-        stack_index = 1
-        while stack_index < len(self.echo_stack):
-            first_edge = self.echo_stack[stack_index - 1]
-            second_edge = self.echo_stack[stack_index]
-            if first_edge.mode == 1 and second_edge.mode == 0:
-                # Found pair of rising to falling edge
-                time_diff = second_edge.time - first_edge.time
-                time_diffs.append(time_diff)
-                # We can skip ahead one step on the stack search
-                stack_index += 1
-            stack_index += 1
-
-        time_diffs = np.array(time_diffs)
+        # Process the edges on the stack and get the time differences
+        time_diffs = self._process_echo_stack()
         distances = time_diffs * self.time_to_distance_factor
 
         self.clear_echo_stack()
 
         return distances.mean()
 
-    def clear_echo_stack(self):
+    def _process_echo_stack(self):
         """
-        Clear the stack but keep the last element if it is a rising edge
+        Go through the echo_stack while clearing it. Some of the pin edge variants
+        should technically be impossible but can happen due to noise on the pins.
+        Therefore we have to handle all cases. Only when we have a rising to falling
+        edge do we treat it as a true sample and calculate the time difference.
         """
-        # TODO: do we need a lock for the stack?
-        last_edge = self.echo_stack[-1]
-        self.echo_stack.clear()
-        if last_edge.mode == 1:
-            self.echo_stack.append(last_edge)
+        time_diffs = []
+        while len(self.echo_stack) > 1:
+            first_edge = self.echo_stack[0]
+            second_edge = self.echo_stack[1]
+            if first_edge.mode == 1 and second_edge.mode == 0:
+                # Found pair of rising to falling edge
+                time_diff = second_edge.time - first_edge.time
+                time_diffs.append(time_diff)
+                self.echo_stack.remove(first_edge)
+                self.echo_stack.remove(second_edge)
+            elif first_edge.mode == 0 and second_edge.mode == 1:
+                # Falling to rising pair. Remove the first.
+                self.echo_stack.remove(first_edge)
+            elif first_edge.mode == 1 and second_edge.mode == 1:
+                # Two rising edges in a row, we should remove the first
+                self.echo_stack.remove(first_edge)
+            else:
+                # Two falling edges in a row, remove both.
+                self.echo_stack.remove(first_edge)
+                self.echo_stack.remove(second_edge)
+        return np.array(time_diffs)
 
 
 def main():
