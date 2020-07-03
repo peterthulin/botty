@@ -128,6 +128,7 @@ def main():
     """ Simple main loop for testing """
     trigger_pin = 25
     echo_pin = 24
+    GPIO.setmode(GPIO.BCM)
     sensor = HY_SRF05(trigger_pin, echo_pin)
     while True:
         distance = sensor.get_distance(send_trigger=True)
