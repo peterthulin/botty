@@ -9,6 +9,7 @@ https://erich.forler.ca/component/content/article/33-blog-hands-on-tech/146-rasp
 
 import RPi.GPIO as GPIO
 import time
+import numpy as np
 
 from collections import namedtuple
 
@@ -18,6 +19,9 @@ TimedPinEdge = namedtuple('TimedPinEdge', ['time', 'mode'])
 
 
 class HY_SRF05():
+    """
+    Class for easy use of HY-SRF05 ultrasonic sensor.
+    """
 
     def __init__(self, trigger_pin, echo_pin):
         self.trigger_pin = trigger_pin
@@ -26,16 +30,14 @@ class HY_SRF05():
         # Assume speed of sound is 343 m/s. The pulse has to travel the distance twice.
         self.time_to_distance_factor = 343.0 / 2.0
 
-        # amount of time in seconds that the system sleeps before sending another
-        # sample request to the sensor
-        self.sample_sleep = 0.01
+        # Amount of time in seconds that the system sleeps before sending another
+        # sample request to the sensor. Sensor has an internal time out of 30 ms
+        # so we should not be lower than that.
+        self.sample_sleep = 0.03
+        self.last_trigger = time.monotonic()
 
-        # Sleep time after trigger call
+        # Sleep time after trigger call should be ~10 microseconds
         self.trigger_sleep = 0.00001
-
-        # Time out in seconds in case the program gets stuck in a loop
-        # 0.05 seconds means we can measure at most 340 * 0.05 / 2 = 8.5 meters
-        self.time_out = .05
 
         # Container for rising and falling edges on echo pin
         self.echo_stack = []
@@ -43,61 +45,77 @@ class HY_SRF05():
         self.init_gpio_pins()
 
     def init_gpio_pins(self):
-        # TODO: where to set the GPIO pin mode?
-        GPIO.setmode(GPIO.BCM)
+        """
+        Configure the pins on the Raspberry Pi and add the echo pin callback.
+        """
         GPIO.setup(self.trigger_pin, GPIO.OUT)
         GPIO.setup(self.echo_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         GPIO.add_event_detect(self.echo_pin, GPIO.BOTH, callback=self.echo_callback)
 
     def echo_callback(self, channel):
         """
-        Callback function when the rising edge is detected on the echo pin.
-        Stores a tuple where the first element is the time and the second is
-        the mode of the pin on readout.
+        Callback function when an edge is detected on the echo pin.
+        Stores the measurement as a TimedPinEdge.
         """
         now = time.monotonic()
         self.echo_stack.append(TimedPinEdge(now, GPIO.input(self.echo_pin)))
 
     def trigger(self):
         """
-        Create a 10 microseconds pulse on the trigger pin
+        Generates a 10 microseconds pulse on the trigger pin
         """
-        GPIO.output(self.trigger_pin, GPIO.HIGH)
-        time.sleep(self.trigger_sleep)
-        GPIO.output(self.trigger_pin, GPIO.LOW)
+        # Make sure we don't trigger too often
+        now = time.monotonic()
+        if now - self.last_trigger < self.sample_sleep:
+            GPIO.output(self.trigger_pin, GPIO.HIGH)
+            time.sleep(self.trigger_sleep)
+            GPIO.output(self.trigger_pin, GPIO.LOW)
+            self.last_trigger = now
 
-    def get_distance(self):
+    def get_distance(self, send_trigger=True):
         """
         Generate an ultrasonic pulse and calculate the distance using the time difference
         on the rising and falling edge on the echo pin
         """
 
-        self.echo_stack.clear()
-
         # Tell the sensor to send out an ultrasonic pulse.
-        self.trigger()
-        start = time.monotonic()
+        if send_trigger:
+            self.trigger()
 
-        # Wait for the echo pulse while checking the timeout condition
-        while len(self.echo_stack) < 2 and (time.monotonic() < start + self.time_out):
-            pass
+        # Check if there are enough edges on the echo_stack
+        if len(self.echo_stack) < 2:
+            return None
 
-        # Calculate the distance based on the timing difference of the echo pin edges
-        distance = None
-        if len(self.echo_stack) == 2:
-            first_edge = self.echo_stack[0]
-            second_edge = self.echo_stack[1]
-            # Make sure we have captured a rising and falling edge on the echo pin
+        # Search for rising to falling edge pairs
+        time_diffs = []
+        stack_index = 1
+        while stack_index < len(self.echo_stack):
+            first_edge = self.echo_stack[stack_index - 1]
+            second_edge = self.echo_stack[stack_index]
             if first_edge.mode == 1 and second_edge.mode == 0:
+                # Found pair of rising to falling edge
                 time_diff = second_edge.time - first_edge.time
-                distance = time_diff * self.time_to_distance_factor
-            else:
-                print("Conflicting pin edges")
+                time_diffs.append(time_diff)
+                # We can skip ahead one step on the stack search
+                stack_index += 1
+            stack_index += 1
 
-        # Pause to make sure we don't overload the sensor with requests
-        time.sleep(self.sample_sleep)
+        time_diffs = np.array(time_diffs)
+        distances = time_diffs * self.time_to_distance_factor
 
-        return distance
+        self.clear_echo_stack()
+
+        return distances.mean()
+
+    def clear_echo_stack(self):
+        """
+        Clear the stack but keep the last element if it is a rising edge
+        """
+        # TODO: do we need a lock for the stack?
+        last_edge = self.echo_stack[-1]
+        self.echo_stack.clear()
+        if last_edge.mode == 1:
+            self.echo_stack.append(last_edge)
 
 
 def main():
@@ -106,11 +124,9 @@ def main():
     echo_pin = 24
     sensor = HY_SRF05(trigger_pin, echo_pin)
     while True:
-        sensor.trigger()
-        time.wait(0.1)
-        print(sensor.echo_stack)
-        print(f"Diff: {sensor.echo_stack[1] - sensor.echo_stack[0]}")
-        sensor.echo_stack.clear()
+        distance = sensor.get_distance(send_trigger=True)
+        if distance:
+            print(f"Distance: {distance:1.4f} m")
 
 
 if __name__ == '__main__':
