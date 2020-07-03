@@ -38,7 +38,9 @@ class MotorDriver_TB6612():
         GPIO.setup(self.right_in2, GPIO.OUT)
 
         self.left_pwm_instance = GPIO.PWM(self.left_pwm, 1.0)
+        self.left_pwm_instance.start(0.0)
         self.right_pwm_instance = GPIO.PWM(self.right_pwm, 1.0)
+        self.right_pwm_instance.start(0.0)
 
     def left_forward(self, dc=100.0, freq=10.0):
         GPIO.output(self.left_in1, GPIO.HIGH)
