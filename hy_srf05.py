@@ -90,8 +90,6 @@ class HY_SRF05():
         time_diffs = self._process_echo_stack()
         distances = time_diffs * self.time_to_distance_factor
 
-        self.clear_echo_stack()
-
         return distances.mean()
 
     def _process_echo_stack(self):
