@@ -50,12 +50,12 @@ class MotorDriver_TB6612():
     def right_forward(self, dc=100.0, freq=10.0):
         GPIO.output(self.right_in1, GPIO.HIGH)
         GPIO.output(self.right_in2, GPIO.LOW)
-        self.set_left_pwm(dc, freq)
+        self.set_right_pwm(dc, freq)
 
     def left_backward(self, dc=100.0, freq=10.0):
         GPIO.output(self.left_in1, GPIO.LOW)
         GPIO.output(self.left_in2, GPIO.HIGH)
-        self.set_right_pwm(dc, freq)
+        self.set_left_pwm(dc, freq)
 
     def right_backward(self, dc=100.0, freq=10.0):
         GPIO.output(self.right_in1, GPIO.LOW)
