@@ -169,7 +169,7 @@ def main():
     sensor = HY_SRF05(
         args.trigger_pin, args.echo_pin,
         trigger_sleep=args.trigger_sleep,
-        trigger_thread=args.trigger_thread,
+        start_trigger_thread=args.trigger_thread,
         accept_inverted_pairs=args.accept_inverted_pairs)
 
     if args.trigger_thread:
