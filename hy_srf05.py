@@ -58,6 +58,7 @@ class HY_SRF05():
             # Create daemon thread to automatically exit on main program exit
             self.trigger_thread = threading.Thread(
                 target=self.auto_trigger_loop, name='trigger_thread', daemon=True)
+            self.trigger_thread.start()
         else:
             self.trigger_thread = None
 
