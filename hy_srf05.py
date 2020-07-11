@@ -24,9 +24,10 @@ class HY_SRF05():
     Class for easy use of HY-SRF05 ultrasonic sensor.
     """
 
-    def __init__(self, trigger_pin, echo_pin, trigger_sleep=0.05):
+    def __init__(self, trigger_pin, echo_pin, trigger_sleep=0.05, accept_inverted_pairs=True):
         self.trigger_pin = trigger_pin
         self.echo_pin = echo_pin
+        self.accept_inverted_pairs = accept_inverted_pairs
 
         # Assume speed of sound is 343 m/s. The pulse has to travel the distance twice.
         self.time_to_distance_factor = 343.0 / 2.0
@@ -64,7 +65,8 @@ class HY_SRF05():
 
     def trigger(self):
         """
-        Generates a 10 microseconds pulse on the trigger pin
+        Generates a 10 microseconds pulse on the trigger pin if elapsed time
+        since last trigger is more than the specified trigger sleep.
         """
         # Make sure we don't trigger too often
         now = time.monotonic()
@@ -112,12 +114,14 @@ class HY_SRF05():
                 self.echo_stack.remove(first_edge)
                 self.echo_stack.remove(second_edge)
             elif first_edge.mode == 0 and second_edge.mode == 1:
-                # Falling to rising pair. Remove the first.
-                # Test accepting these pairs as well since it seems common that they happen...
-                time_diff = second_edge.time - first_edge.time
-                time_diffs.append(time_diff)
-                self.echo_stack.remove(first_edge)
-                self.echo_stack.remove(second_edge)
+                if self.accept_inverted_pairs:
+                    # Technically falling to rising pairs should not be acceptable
+                    time_diff = second_edge.time - first_edge.time
+                    time_diffs.append(time_diff)
+                    self.echo_stack.remove(first_edge)
+                    self.echo_stack.remove(second_edge)
+                else:
+                    self.echo_stack.remove(first_edge)
             elif first_edge.mode == 1 and second_edge.mode == 1:
                 # Two rising edges in a row, we should remove the first
                 self.echo_stack.remove(first_edge)
@@ -125,14 +129,25 @@ class HY_SRF05():
                 # Two falling edges in a row, remove both.
                 self.echo_stack.remove(first_edge)
                 self.echo_stack.remove(second_edge)
+
+        # Clear last element if falling edge
+        if len(self.echo_stack) == 1 and not self.accept_inverted_pairs:
+            if self.echo_stack[0].mode == 0:
+                self.echo_stack.remove(self.echo_stack[0])
+
         return np.array(time_diffs)
 
 
 def main():
     """ Simple main loop for testing """
     args = parse_args()
+
     GPIO.setmode(GPIO.BCM)
-    sensor = HY_SRF05(args.trigger_pin, args.echo_pin, trigger_sleep=args.trigger_sleep)
+    sensor = HY_SRF05(
+        args.trigger_pin, args.echo_pin,
+        trigger_sleep=args.trigger_sleep,
+        accept_inverted_pairs=args.accept_inverted_pairs)
+
     while True:
         distance = sensor.get_distance(send_trigger=True)
         if distance:
@@ -142,14 +157,17 @@ def main():
 def parse_args():
     parser = argparse.ArgumentParser(description="Test program for HY-SRF05 sensor.")
     parser.add_argument(
-        '-t', '--trigger-pin', type=int, default=25,
+        '-t', '--trigger-pin', type=int, default=3,
         help='GPIO pin connected to the HY-SRF05 trigger pin.')
     parser.add_argument(
-        '-e', '--echo-pin', type=int, default=24,
+        '-e', '--echo-pin', type=int, default=2,
         help='GPIO pin connected to the HY-SRF05 echo pin.')
     parser.add_argument(
         '-s', '--trigger-sleep', type=float, default=0.05,
         help='Minimum allowed time between sensor triggers. Minimum allowed is 0.03 s.')
+    parser.add_argument(
+        '-i', '--accept-inverted-pairs', action='store_true',
+        help='Choose to accept falling to rising echo pairs as distance measurements.')
     return parser.parse_args()
 
 
