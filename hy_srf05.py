@@ -97,7 +97,7 @@ class HY_SRF05():
         """
         while True:
             self.trigger()
-            self.sleep(self.trigger_sleep)
+            time.sleep(self.trigger_sleep)
 
     def get_distance(self, send_trigger=True):
         """
