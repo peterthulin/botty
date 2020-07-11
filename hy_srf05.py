@@ -9,6 +9,7 @@ https://erich.forler.ca/component/content/article/33-blog-hands-on-tech/146-rasp
 
 import argparse
 import time
+import threading
 from collections import namedtuple
 
 import numpy as np
@@ -24,7 +25,13 @@ class HY_SRF05():
     Class for easy use of HY-SRF05 ultrasonic sensor.
     """
 
-    def __init__(self, trigger_pin, echo_pin, trigger_sleep=0.05, accept_inverted_pairs=True):
+    def __init__(self,
+                 trigger_pin,
+                 echo_pin,
+                 trigger_sleep=0.05,
+                 start_trigger_thread=False,
+                 accept_inverted_pairs=True):
+
         self.trigger_pin = trigger_pin
         self.echo_pin = echo_pin
         self.accept_inverted_pairs = accept_inverted_pairs
@@ -46,6 +53,13 @@ class HY_SRF05():
         self.echo_stack = []
 
         self.init_gpio_pins()
+
+        if start_trigger_thread:
+            # Create daemon thread to automatically exit on main program exit
+            self.trigger_thread = threading.Thread(
+                target=self.auto_trigger_loop, name='trigger_thread', daemon=True)
+        else:
+            self.trigger_thread = None
 
     def init_gpio_pins(self):
         """
@@ -75,6 +89,14 @@ class HY_SRF05():
             time.sleep(self.trigger_pulse_sleep)
             GPIO.output(self.trigger_pin, GPIO.LOW)
             self.last_trigger = now
+
+    def auto_trigger_loop(self):
+        """
+        Create a loop that automatically triggers pulses on the sensor.
+        """
+        while True:
+            self.trigger()
+            self.sleep(self.trigger_sleep)
 
     def get_distance(self, send_trigger=True):
         """
@@ -147,12 +169,20 @@ def main():
     sensor = HY_SRF05(
         args.trigger_pin, args.echo_pin,
         trigger_sleep=args.trigger_sleep,
+        trigger_thread=args.trigger_thread,
         accept_inverted_pairs=args.accept_inverted_pairs)
 
-    while True:
-        distance = sensor.get_distance(send_trigger=True)
-        if distance:
-            print(f"Distance: {distance:1.4f} m")
+    if args.trigger_thread:
+        while True:
+            time.sleep(args.trigger_sleep * 3)
+            distance = sensor.get_distance(send_trigger=False)
+            if distance:
+                print(f"Distance: {distance:1.4f} m")
+    else:
+        while True:
+            distance = sensor.get_distance(send_trigger=True)
+            if distance:
+                print(f"Distance: {distance:1.4f} m")
 
 
 def parse_args():
@@ -169,6 +199,9 @@ def parse_args():
     parser.add_argument(
         '-i', '--accept-inverted-pairs', action='store_true',
         help='Choose to accept falling to rising echo pairs as distance measurements.')
+    parser.add_argument(
+        '-d', '--trigger-thread', action='store_true',
+        help='Start a thread to trigger sensor automatically.')
     return parser.parse_args()
 
 
