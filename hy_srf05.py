@@ -86,15 +86,16 @@ class HY_SRF05():
         if send_trigger:
             self.trigger()
 
-        # Check if there are enough edges on the echo_stack
-        if len(self.echo_stack) < 2:
-            return None
-
         # Process the edges on the stack and get the time differences
         time_diffs = self._process_echo_stack()
-        distances = time_diffs * self.time_to_distance_factor
 
-        return distances.mean()
+        distance = None
+
+        if len(time_diffs) > 0:
+            distances = time_diffs * self.time_to_distance_factor
+            distance = distances.mean()
+
+        return distance
 
     def _process_echo_stack(self):
         """
